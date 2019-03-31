@@ -1,14 +1,14 @@
 {
   "name": "homebridge-mitv",
-  "version": "1.0.0",
-  "description": "",
+  "version": "0.1.0",
+  "description": "Homebridge plugin for Mi TV",
   "main": "dist/index.js",
   "scripts": {
     "dev": "rollup -c -w",
     "build": "rollup -c"
   },
-  "author": "",
-  "license": "ISC",
+  "author": "Zhuoran Tan",
+  "license": "MIT",
   "keywords": [
     "homebridge-plugin"
   ],
