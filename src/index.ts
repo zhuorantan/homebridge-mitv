@@ -1,7 +1,6 @@
-import {
+import { API } from 'homebridge';
+import { MiTVPlatform } from './platform';
 
-}
-
-export default (homebridge) => {
-  registerPlatform(homebridge)
+export default function (api: API): void {
+  api.registerPlatform('MiTVPlatform', MiTVPlatform);
 }

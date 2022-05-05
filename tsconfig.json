@@ -2,6 +2,7 @@
   "include": ["src/*.ts"],
   "compilerOptions": {
     "target": "es6",
+    "module": "commonjs",
     "lib": [
       "es2019"
     ],

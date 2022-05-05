@@ -1,99 +1,96 @@
-import TV from "./tv"
+import { AccessoryPlugin, API, HAP, Logging } from 'homebridge';
+import { KEYS, MiTV } from './tv';
 
-class MiTVAccessory {
+export class MiTVAccessory implements AccessoryPlugin {
+  constructor(private readonly api: API, private readonly log: Logging, private readonly tv: MiTV) {}
 
-    constructor(homebridge, platform, config) {
-        this.Service = homebridge.hap.Service
-        this.Characteristic = homebridge.hap.Characteristic
+  private get hap(): HAP {
+    return this.api.hap;
+  }
 
-        this.platform = platform
-        this.tv = new TV(config.ip)
-        this.name = config.name || 'Mi TV'
+  setActive(value: boolean, callback) {
+    if (value) {
+      this.log.info("Waking TV...")
+      this.tv.wake().then(() => {
+        this.log.info("Successfully waked TV...")
+        callback()
+      }).catch(error => {
+        callback(error)
+      })
+    } else {
+      this.log.info("Sending TV to sleep...")
+      this.tv.sleep().then(() => {
+        this.log.info("Successfully sent TV to sleep...")
+        callback()
+      }).catch(error => {
+        callback(error)
+      })
+    }
+  }
 
-        this.tvService = new this.Service.Television(this.name)
-        this.tvService.setCharacteristic(this.Characteristic.ConfiguredName, this.name)
-
-        this.tvService
-        .getCharacteristic(this.Characteristic.Active)
-        .on('set', this.setActive.bind(this))
-
-        this.tvService
-        .getCharacteristic(this.Characteristic.RemoteKey)
-        .on('set', this.pressKey.bind(this))
+  pressKey(value: number, callback) {
+    let key: string;
+    switch (value) {
+      case this.hap.Characteristic.RemoteKey.ARROW_UP:
+        key = KEYS.up
+        break
+      case this.hap.Characteristic.RemoteKey.ARROW_DOWN:
+        key = KEYS.down
+        break
+      case this.hap.Characteristic.RemoteKey.ARROW_LEFT:
+        key = KEYS.left
+        break
+      case this.hap.Characteristic.RemoteKey.ARROW_RIGHT:
+        key = KEYS.right
+        break
+      case this.hap.Characteristic.RemoteKey.SELECT:
+        key = KEYS.enter
+        break
+      case this.hap.Characteristic.RemoteKey.BACK:
+        key = KEYS.back
+        break
+      case this.hap.Characteristic.RemoteKey.EXIT:
+        key = KEYS.home
+        break
+      case this.hap.Characteristic.RemoteKey.PLAY_PAUSE:
+        key = KEYS.enter
+        break
+      case this.hap.Characteristic.RemoteKey.INFORMATION:
+        key = KEYS.menu
+        break
+      default:
+        callback()
+        return
     }
 
-    setActive(value, callback) {
-        if (value) {
-            this.platform.log("Waking TV...")
-            this.tv.wake().then(() => {
-                this.platform.log("Successfully waked TV...")
-                callback()
-            }).catch(error => {
-                callback(error)
-            })
-        } else {
-            this.platform.log("Sending TV to sleep...")
-            this.tv.sleep().then(() => {
-                this.platform.log("Successfully sent TV to sleep...")
-                callback()
-            }).catch(error => {
-                callback(error)
-            })
-        }
-    }
+    this.log.info(`Pressing Key: ${key}`)
 
-    pressKey(value, callback) {
-        let key
-        switch(value) {
-            case this.Characteristic.RemoteKey.ARROW_UP:
-                key = TV.keys.up
-                break
-            case this.Characteristic.RemoteKey.ARROW_DOWN:
-                key = TV.keys.down
-                break
-            case this.Characteristic.RemoteKey.ARROW_LEFT:
-                key = TV.keys.left
-                break
-            case this.Characteristic.RemoteKey.ARROW_RIGHT:
-                key = TV.keys.right
-                break
-            case this.Characteristic.RemoteKey.SELECT:
-                key = TV.keys.enter
-                break
-            case this.Characteristic.RemoteKey.BACK:
-                key = TV.keys.back
-                break
-            case this.Characteristic.RemoteKey.EXIT:
-                key = TV.keys.home
-                break
-            case this.Characteristic.RemoteKey.PLAY_PAUSE:
-                key = TV.keys.enter
-                break
-            case this.Characteristic.RemoteKey.INFORMATION:
-                key = TV.keys.menu
-                break
-        }
+    this.tv.pressKey(key).then(() => {
+      this.log.info(`Successfully pressed key: ${key}`)
+      callback()
+    }).catch(error => {
+      callback(error)
+    })
+  }
 
-        this.platform.log(`Pressing Key: ${key}`)
+  getInformationService() {
+    return new this.hap.Service.AccessoryInformation()
+      .setCharacteristic(this.hap.Characteristic.Name, this.tv.name)
+      .setCharacteristic(this.hap.Characteristic.Manufacturer, 'Xiaomi')
+  }
 
-        this.tv.pressKey(key).then(() => {
-            this.platform.log(`Successfully pressed key: ${key}`)
-            callback()
-        }).catch(error => {
-            callback(error)
-        })
-    }
+  getServices() {
+    const tvService = new this.hap.Service.Television(this.tv.name)
+    tvService.setCharacteristic(this.hap.Characteristic.ConfiguredName, this.tv.name)
 
-    getInformationService() {
-        return new this.Service.AccessoryInformation()
-        .setCharacteristic(this.Characteristic.Name, this.name)
-        .setCharacteristic(this.Characteristic.Manufacturer, 'Xiaomi')
-    }
+    tvService
+      .getCharacteristic(this.hap.Characteristic.Active)
+      .on('set', this.setActive.bind(this))
 
-    getServices() {
-        return [this.tvService, this.getInformationService()]
-    }
+    tvService
+      .getCharacteristic(this.hap.Characteristic.RemoteKey)
+      .on('set', this.pressKey.bind(this))
 
+    return [tvService, this.getInformationService()]
+  }
 }
-
-export default MiTVAccessory

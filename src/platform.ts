@@ -1,24 +1,22 @@
-import MiTVAccessory from './accessory'
+import { AccessoryPlugin, API, Logging, PlatformConfig, StaticPlatformPlugin } from 'homebridge';
+import { MiTV } from './tv';
+import { MiTVAccessory } from './accessory';
 
-function registerPlatform(homebridge) {
-    MiTVPlatform.homebridge = homebridge
-
-    homebridge.registerPlatform('homebridge-mitv', 'MiTVPlatform', MiTVPlatform)
+interface TVConfig {
+  ip: string;
+  name: string;
 }
 
-class MiTVPlatform {
+export class MiTVPlatform implements StaticPlatformPlugin {
+  private readonly tvs: MiTV[];
 
-    constructor(log, config, api) {
-        this.log = log
-        this.api = api
-        this.tvs = config.tvs || config.tv && [config.tv] || []
-    }
+  constructor(private readonly log: Logging, config: PlatformConfig, private readonly api: API) {
+    const tvConfigs: TVConfig[] = config.tvs || config.tv && [config.tv] || [];
+    this.tvs = tvConfigs.map((tvConfig) => new MiTV(tvConfig.ip, tvConfig.name));
+  }
 
-    accessories(callback) {
-        const accessories = this.tvs.map(config => new MiTVAccessory(MiTVPlatform.homebridge, this, config))
-        callback(accessories)
-    }
-
+  accessories(callback: (foundAccessories: AccessoryPlugin[]) => void) {
+    const accessories = this.tvs.map((tv) => new MiTVAccessory(this.api, this.log, tv));
+    callback(accessories);
+  }
 }
-
-export default registerPlatform
